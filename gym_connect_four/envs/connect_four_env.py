@@ -105,6 +105,7 @@ class ResultType(Enum):
     DRAW = 0
     WIN1 = 1
     WIN2 = -1
+    ILLEGAL = 5
 
     def __eq__(self, other):
         """
@@ -229,8 +230,6 @@ class ConnectFourEnv(gym.Env):
 
     def oppo_step(self, oppo: Player) -> None:
         self.__current_player = -1
-        import pdb
-        pdb.set_trace()
         act = oppo.get_next_action(self.__board * -1) #TODO hard coding player opponent
         step_result = self._step(act)
 
@@ -238,8 +237,20 @@ class ConnectFourEnv(gym.Env):
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         self.__current_player = 1 #TODO hard coding for STDP C4
         step_result = self._step(action)
+
+        if step_result[0] is ResultType.ILLEGAL:
+            available_moves = self.available_moves()
+            aa = random.sample(available_moves,1)
+            aa = aa[0]
+            step_result = self._step(aa)
+            #TODO....
+            print('rand for softmax......................................................')
+
         reward = step_result.get_reward(self.__current_player)
         done = step_result.is_done()
+
+        if done:
+            return self.__board.copy(), reward, done, {}
 
         self.__current_player = 2
         act = self.opponent.get_next_action(self.__board)
@@ -251,9 +262,11 @@ class ConnectFourEnv(gym.Env):
         result = ResultType.NONE
 
         if not self.is_valid_action(action):
-            raise Exception(
-                'Unable to determine a valid move! Maybe invoke at the wrong time?'
-            )
+            result = ResultType.ILLEGAL
+            return self.StepResult(result)
+#            raise Exception(
+#                'Unable to determine a valid move! Maybe invoke at the wrong time?'
+#            )
 
         # Check and perform action
         for index in list(reversed(range(self.board_shape[0]))):
@@ -266,8 +279,6 @@ class ConnectFourEnv(gym.Env):
             result = ResultType.DRAW
         else:
             # Check win condition
-            import pdb
-            pdb.set_trace()
             if self.is_win_state():
                 result = ResultType.WIN1 if self.__current_player == 1 else ResultType.WIN2
         return self.StepResult(result)
@@ -370,14 +381,17 @@ class ConnectFourEnv(gym.Env):
             for j in range(self.board_shape[1] - 3):
 #                value = 0
                 value = []
+                brr = 0
                 for k in range(4):
-                    value.append(self.__board[i+k][j+k])
+                    temp = self.__board[i+k][j+k]
+                    if temp == 0:
+                        brr = 1
+                        break
+                    value.append(temp)
 #                    value += self.__board[i + k][j + k]
 #                    if abs(value) == 4:
-                    if value[0] == 0:
-                        break
-                    if value[0] == value[1] == value[2] == value[3]:
-                        return True
+                if brr is not 1 and (value[0] == value[1] == value[2] == value[3]):
+                    return True
 
         reversed_board = np.fliplr(self.__board)
         # Test reverse diagonal
@@ -385,14 +399,17 @@ class ConnectFourEnv(gym.Env):
             for j in range(self.board_shape[1] - 3):
 #                value = 0
                 value = []
+                brr = 0
                 for k in range(4):
-                    value.append(reversed_board[i+k][j+k])
-#                    value += reversed_board[i + k][j + k]
-                    if value[0] == 0:
+                    temp = reversed_board[i+k][j+k]
+                    if temp == 0:
+                        brr = 1
                         break
-                    if value[0] == value[1] == value[2] == value[3]:
+                    value.append(temp)
+#                    value += reversed_board[i + k][j + k]
+                if brr is not 1 and (value[0] == value[1] == value[2] == value[3]):
 #                    if abs(value) == 4:
-                        return True
+                    return True
 
         return False
 
