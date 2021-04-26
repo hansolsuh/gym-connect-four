@@ -167,6 +167,8 @@ class ConnectFourEnv(gym.Env):
     def __init__(self, board_shape=(6, 7), window_width=512, window_height=512):
         super(ConnectFourEnv, self).__init__()
 
+        #TODO edited this. seems to work fine
+        self.opponent = RandomPlayer(self, 'OpponentRandomPlayer')
         self.board_shape = board_shape
 
         self.observation_space = spaces.Box(low=-1,
@@ -188,7 +190,8 @@ class ConnectFourEnv(gym.Env):
         player1.reset()
         player2.reset()
         self.reset(board)
-
+        import pdb
+        pdb.set_trace()
         cp = lambda: self.__current_player
 
         def change_player():
@@ -224,10 +227,24 @@ class ConnectFourEnv(gym.Env):
 
         return step_result.res_type
 
+    def oppo_step(self, oppo: Player) -> None:
+        self.__current_player = -1
+        import pdb
+        pdb.set_trace()
+        act = oppo.get_next_action(self.__board * -1) #TODO hard coding player opponent
+        step_result = self._step(act)
+
+
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        self.__current_player = 1 #TODO hard coding for STDP C4
         step_result = self._step(action)
         reward = step_result.get_reward(self.__current_player)
         done = step_result.is_done()
+
+        self.__current_player = 2
+        act = self.opponent.get_next_action(self.__board)
+        step_result = self._step(act)
+
         return self.__board.copy(), reward, done, {}
 
     def _step(self, action: int) -> StepResult:
@@ -249,6 +266,8 @@ class ConnectFourEnv(gym.Env):
             result = ResultType.DRAW
         else:
             # Check win condition
+            import pdb
+            pdb.set_trace()
             if self.is_win_state():
                 result = ResultType.WIN1 if self.__current_player == 1 else ResultType.WIN2
         return self.StepResult(result)
@@ -271,7 +290,7 @@ class ConnectFourEnv(gym.Env):
             replacements = {
                 self.__player_color: 'A',
                 0: ' ',
-                -1 * self.__player_color: 'B'
+                2 * self.__player_color: 'B'
             }
 
             def render_line(line):
@@ -320,35 +339,59 @@ class ConnectFourEnv(gym.Env):
         # Test rows
         for i in range(self.board_shape[0]):
             for j in range(self.board_shape[1] - 3):
-                value = sum(self.__board[i][j:j + 4])
-                if abs(value) == 4:
+                a = self.__board[i][j]
+                b = self.__board[i][j+1]
+                c = self.__board[i][j+2]
+                d = self.__board[i][j+3]
+                if a == 0:
+                    break
+#                value = sum(self.__board[i][j:j + 4])
+#                if abs(value) == 4:
+                if a == b == c == d:
                     return True
 
         # Test columns on transpose array
         reversed_board = [list(i) for i in zip(*self.__board)]
         for i in range(self.board_shape[1]):
             for j in range(self.board_shape[0] - 3):
-                value = sum(reversed_board[i][j:j + 4])
-                if abs(value) == 4:
+                a = reversed_board[i][j]
+                b = reversed_board[i][j+1]
+                c = reversed_board[i][j+2]
+                d = reversed_board[i][j+3]
+                if a == 0:
+                    break
+#                value = sum(reversed_board[i][j:j + 4])
+#                if abs(value) == 4:
+                if a == b == c == d:
                     return True
 
         # Test diagonal
         for i in range(self.board_shape[0] - 3):
             for j in range(self.board_shape[1] - 3):
-                value = 0
+#                value = 0
+                value = []
                 for k in range(4):
-                    value += self.__board[i + k][j + k]
-                    if abs(value) == 4:
+                    value.append(self.__board[i+k][j+k])
+#                    value += self.__board[i + k][j + k]
+#                    if abs(value) == 4:
+                    if value[0] == 0:
+                        break
+                    if value[0] == value[1] == value[2] == value[3]:
                         return True
 
         reversed_board = np.fliplr(self.__board)
         # Test reverse diagonal
         for i in range(self.board_shape[0] - 3):
             for j in range(self.board_shape[1] - 3):
-                value = 0
+#                value = 0
+                value = []
                 for k in range(4):
-                    value += reversed_board[i + k][j + k]
-                    if abs(value) == 4:
+                    value.append(reversed_board[i+k][j+k])
+#                    value += reversed_board[i + k][j + k]
+                    if value[0] == 0:
+                        break
+                    if value[0] == value[1] == value[2] == value[3]:
+#                    if abs(value) == 4:
                         return True
 
         return False
