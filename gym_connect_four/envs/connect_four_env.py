@@ -252,9 +252,15 @@ class ConnectFourEnv(gym.Env):
         if done:
             return self.__board.copy(), reward, done, {}
 
-        self.__current_player = 2
+        self.__current_player = 10
         act = self.opponent.get_next_action(self.__board)
         step_result = self._step(act)
+        done = step_result.is_done()
+
+        if done:
+            reward2 = step_result.res_type.value #-1
+            return self.__board.copy(), reward2, done, {}
+
 
         return self.__board.copy(), reward, done, {}
 
@@ -301,7 +307,7 @@ class ConnectFourEnv(gym.Env):
             replacements = {
                 self.__player_color: 'A',
                 0: ' ',
-                2 * self.__player_color: 'B'
+                10 * self.__player_color: 'B'
             }
 
             def render_line(line):
